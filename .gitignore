@@ -1,4 +1,5 @@
 /node_modules
 /.pnp
+/listening_files/*
 
 google-credentials.json

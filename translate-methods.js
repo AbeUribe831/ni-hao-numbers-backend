@@ -10,14 +10,25 @@ const language_gender = 'MALE';
 const translate = new Translate();
 const text_to_speech_client = new textToSpeech.TextToSpeechClient();
 
-const numToWord = require('js-number-to-word-processor');
+const convertNumToWord = require('js-number-to-word-processor');
+// param: numbers are a string 
 async function translate_numbers_to_chinese_chars(numbers) {
     try {
         let num_as_words = [];
-        // TODO:: get the number of decimal placement of each number or just stick to the two default
-        numToWord(numbers).forEach(word => {
-            num_as_words.push(word.decimalPoint ? word.displayWholeWord + ' point ' + word.displayDecimalWord : word.displayWord);
-        })
+        numbers.forEach(number => {
+            const split_num = number.split(".");
+            // only the whole number as a word
+            let word = convertNumToWord(split_num[0])[0].displayWholeWord;
+            if(split_num.length > 1) {
+                word += " point";
+                for(digit of split_num[1]) {
+                    word += " " + convertNumToWord(digit)[0].displayWholeWord;
+                }
+            }
+            num_as_words.push(word);
+        });
+        console.log('number as words: ', num_as_words);
+
         console.log('numbers to words: ', num_as_words);
         let [translated_chars] = await translate.translate(num_as_words, target);
         console.log('translate: ', translated_chars)
@@ -36,7 +47,7 @@ async function translate_numbers_to_chinese_audio(numbers, file_name) {
     let index = 0;
     for (const number of numbers) {
         // .mp3 but have changed to .txt
-        let outputFile = `${file_name}${index}.mp3`;
+        let outputFile = `listening_files/${file_name}${index}.mp3`;
         const request = {
             input : {text: number},
             voice: {languageCode: language_code, ssmlGender: language_gender},
@@ -46,20 +57,21 @@ async function translate_numbers_to_chinese_audio(numbers, file_name) {
         const writeFile = util.promisify(fs.writeFile);
         await writeFile(outputFile, response.audioContent, 'binary');
         outputFile_list.push(outputFile);
+        index++;
     };
     return outputFile_list;
 }
-// practice_questions from user request
-// TODO:: add checks that each instance in practice_questions is valid or send error
+// to_translate_numbers from user request
+// TODO:: add checks that each instance in to_translate_numbers is valid or send error
 // TODO:: create translate_audio directory if doesn't exit, delete all audio files at the end of method
 // return: a json object of result 
-async function get_q_and_a_from_gcloud(practice_questions) {
+async function get_q_and_a_from_gcloud(to_translate_numbers) {
     let listen_and_character = [];
     let listen_and_number = [];
     let character_list = [];
 
     // fill the three lists based on what sort of translations are needed for each number
-    practice_questions.forEach(question => {
+    to_translate_numbers.forEach(question => {
         if(question.question_type === 'listen') {
             if(question.answer_type === 'writeCharacter') {
                 listen_and_character.push(question.number);
@@ -93,7 +105,7 @@ async function get_q_and_a_from_gcloud(practice_questions) {
             console.log('files: ', files_lis_and_num_list);
             console.log('files and char: ', files_lis_from_lis_and_char_list);
             console.log('inside list: ', trans_chars_list);
-            for (question of practice_questions) {
+            for (question of to_translate_numbers) {
                 if(question.question_type === 'listen') {
                     // TODO:: clean up repetative code 
                     if(question.answer_type === 'writeCharacter') {
@@ -159,7 +171,7 @@ async function get_q_and_a_from_gcloud(practice_questions) {
                     }
                 }
             };
-            console.log('before the return: ', response);
+            // console.log('before the return: ', response);
             return response;
 }
 
