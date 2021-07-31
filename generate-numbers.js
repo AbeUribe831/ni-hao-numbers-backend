@@ -44,9 +44,7 @@ function generate_numbers(question_types) {
     let practice_questions = [];
     for (let i = 0; i < size; i++) {
         const question_type = valid_questions[get_random_inclusive_integer(0, valid_questions.length - 1)];
-        console.log('question type index: ', question_type);
         const random_num = get_random_inclusive_number_with_decimal_placement(min, max, decimal_placement);
-        console.log('gereated number: ', random_num);
         const answer_type = get_answer_type(question_type, speak);
 
         practice_questions.push({

@@ -2,6 +2,7 @@ const {Translate} = require('@google-cloud/translate').v2;
 const textToSpeech = require('@google-cloud/text-to-speech');
 const speech = require('@google-cloud/speech');
 const fs = require('fs');
+const path = require('path');
 const util = require('util');
 // target is the language 
 const target = 'zh';
@@ -10,7 +11,21 @@ const language_gender = 'MALE';
 const translate = new Translate();
 const text_to_speech_client = new textToSpeech.TextToSpeechClient();
 
+const audio_dir = __dirname + '/listening_files';
+
 const convertNumToWord = require('js-number-to-word-processor');
+
+function remove_files(directory) {
+    fs.readdir(directory, (err, files) => {
+        if (err) throw err;
+
+        for(const file of files) {
+            fs.unlink(path.join(directory, file), err => {
+                if(err) throw err;
+            });
+        }
+    });
+}
 // param: numbers are a string 
 async function translate_numbers_to_chinese_chars(numbers) {
     try {
@@ -47,7 +62,7 @@ async function translate_numbers_to_chinese_audio(numbers, file_name) {
     let index = 0;
     for (const number of numbers) {
         // .mp3 but have changed to .txt
-        let outputFile = `listening_files/${file_name}${index}.mp3`;
+        let outputFile = `${audio_dir}/${file_name}${index}.mp3`;
         const request = {
             input : {text: number},
             voice: {languageCode: language_code, ssmlGender: language_gender},
@@ -69,9 +84,12 @@ async function get_q_and_a_from_gcloud(to_translate_numbers) {
     let listen_and_character = [];
     let listen_and_number = [];
     let character_list = [];
-
     // fill the three lists based on what sort of translations are needed for each number
     to_translate_numbers.forEach(question => {
+        // will continue because this question will not need translation 
+        if(question.question_type === 'readNumber' && question.answer_type === 'speak') {
+            return;
+        }
         if(question.question_type === 'listen') {
             if(question.answer_type === 'writeCharacter') {
                 listen_and_character.push(question.number);
@@ -81,12 +99,12 @@ async function get_q_and_a_from_gcloud(to_translate_numbers) {
             }
         }
         else {
-            character_list.push(question.number)
+            character_list.push(question.number);
         }
     });
-    console.log(listen_and_character)
-    console.log(listen_and_number)
-    console.log(character_list)
+    console.log('listen and write char:', listen_and_character);
+    console.log('listen and write num: ', listen_and_number);
+    console.log('either read or write char: ', character_list);
     // TODO:: write an async function calling each translate method for each list
     let response = [];
     // use array.shift() to pop front element
@@ -140,7 +158,7 @@ async function get_q_and_a_from_gcloud(to_translate_numbers) {
                             answer_type: question.answer_type 
                         });
                     }
-                    // answer with writing the number
+                    // question.answer_type === writeCharacter 
                     else {
                         response.push({
                             listen: null,
@@ -150,7 +168,7 @@ async function get_q_and_a_from_gcloud(to_translate_numbers) {
                         });
                     }
                 }
-                // readNumber
+                // question.question_type === readNumber
                 else {
                     if(question.answer_type === 'speak') {
                         response.push({
@@ -171,6 +189,7 @@ async function get_q_and_a_from_gcloud(to_translate_numbers) {
                     }
                 }
             };
+            remove_files(audio_dir);
             // console.log('before the return: ', response);
             return response;
 }
