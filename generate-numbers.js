@@ -6,11 +6,15 @@ function get_random_inclusive_integer(min, max) {
     return Math.floor(Math.random() * (max_num - min_num + 1) + min_num);
 }
 // Assumes that min and max are passed with their appropriate decimal placement
+// JS allows range [-9,999,999,999,999.99, 9,999,999,999,999.99]
 function get_random_inclusive_number_with_decimal_placement(min, max, decimal_placement) {
     const decimal_in_tens = Math.pow(10, decimal_placement);
     var min_num = parseFloat(min) * decimal_in_tens;
     var max_num = parseFloat(max) * decimal_in_tens;
-    return ((Math.random() * (max_num - min_num + 1) + min_num) / decimal_in_tens).toFixed(decimal_placement);
+    console.log('see min number: ', min_num, ' see max number: ', max_num, ' see tens: ', decimal_in_tens);
+    var retRand = ((Math.random() * (max_num - min_num) + min_num) / decimal_in_tens).toFixed(decimal_placement);
+    console.log('The random number is: ', retRand);
+    return retRand
 }
 function get_answer_type(questionType, speakBool) {
     let randomNum;

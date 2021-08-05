@@ -26,6 +26,8 @@ app.post('/studyboardSetup', (req, res) => {
     //console.log(req.body);
     const generated_numbers  = random_gen.generate_numbers(req.body);
     console.log(generated_numbers); 
+    // add res.charset = 'utf-8' using charset allows use to send chinese chars
+    // add res.contentType('text') 
     translate.get_q_and_a_from_gcloud(generated_numbers).then((body, err) => {
         //console.log(body);
         res.send(body);
