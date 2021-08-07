@@ -241,11 +241,19 @@ const chinese_char_map = {
         "-" : "負"
     }
 }
-
+function get_negative_or_positive_number(is_negative, char_set, number) {
+    if(is_negative)
+        return chinese_char_map[char_set]["-"] + number;
+    return number;
+}
 // parm: chn_s_or_t: string with "tc" or "sc"
 // parm: number: string
 // TODO:: check that number is valid and in range of [-9,999,999,999,999; 9,999,999,999,999]
 function conv_num_as_string_to_chn_char(chn_s_or_t, number) {
+    if(isNaN(number)) throw 'Parameter for number is not a valid number';
+    const num_as_float = parseFloat(number);
+    if(num_as_float < -9999999999999.99 || num_as_float > 9999999999999.99) throw 'Number is out of range must be between -9,999,999,999,999.99 to 9,999,999,999,999.99 '
+    if (chn_s_or_t !== 'sc' && chn_s_or_t !== 'tc') throw 'Invalid parameter use eiter "sc" for simplified chinese or "tc" for traditional chinese';
     let split_num = number.split(".");
     let decimal_translated = ""
     // convert decimals to chinese characters
@@ -259,8 +267,13 @@ function conv_num_as_string_to_chn_char(chn_s_or_t, number) {
     let chn_char_in_rev = []; 
     let abs_tens = 1;
     let local_tens = 1;
+    let is_negative = false;
     for (let i = split_num[0].length - 1; i >= 0; i--) {
         const curr_num = split_num[0][i];
+        if(curr_num === "-") {
+            is_negative = true;
+            break;
+        }
         let tens_char = "";
         // set tens if exists
         if (chinese_char_map[chn_s_or_t]["tens"][abs_tens] !== undefined) tens_char = chinese_char_map[chn_s_or_t]["tens"][abs_tens];
@@ -297,10 +310,6 @@ function conv_num_as_string_to_chn_char(chn_s_or_t, number) {
                     chn_char_in_rev.push(chinese_char_map["zero_to_nine"][curr_num]);
                 }
             }
-            // add the negative sign at the end
-            else if (curr_num === "-") {
-                chn_char_in_rev.push(chinese_char_map[chn_s_or_t][curr_num]);
-            }
         }
         abs_tens *= 10;
         if(local_tens === 1000) {
@@ -317,7 +326,8 @@ function conv_num_as_string_to_chn_char(chn_s_or_t, number) {
     }
     
     // takes are of the case when whole number is a sigle digit
-    if (chn_char_in_rev.length === 1) return chn_char_in_rev[0] + decimal_translated;
+    if (chn_char_in_rev.length === 1) 
+        return get_negative_or_positive_number(is_negative, chn_s_or_t, chn_char_in_rev[0] + decimal_translated);
     // chn_char_in_rev to string 
     let full_number_translated = "";
     let index_no_excess_zeros = 0;
@@ -327,67 +337,13 @@ function conv_num_as_string_to_chn_char(chn_s_or_t, number) {
     for (let i = chn_char_in_rev.length - 1; i >= index_no_excess_zeros; i--) {
             full_number_translated += chn_char_in_rev[i];
     }
-    // if the full number just tens then remove one at the front
-    const all_digits = `${chinese_char_map["zero_to_nine"][1]}${chinese_char_map["zero_to_nine"][2]}${chinese_char_map["zero_to_nine"][3]}${chinese_char_map["zero_to_nine"][4]}${chinese_char_map["zero_to_nine"][5]}${chinese_char_map["zero_to_nine"][6]}${chinese_char_map["zero_to_nine"][7]}${chinese_char_map["zero_to_nine"][8]}${chinese_char_map["zero_to_nine"][9]}`
-    let ten_re = new RegExp(`^[${all_digits}]{0,1}${chinese_char_map[chn_s_or_t]["tens"][10]}{1}[${all_digits}]{0,1}$`);
+    //used to remove 1 at the front if the leading number is  一十
+    let ten_re = new RegExp(`^[${chinese_char_map["zero_to_nine"][1]}]{1}${chinese_char_map[chn_s_or_t]["tens"][10]}{1}.*`);
     let full_number_as_tens = full_number_translated.match(ten_re);
-    if (full_number_as_tens !== null && full_number_as_tens.length === 1 && full_number_as_tens[0][0] === chinese_char_map["zero_to_nine"][1]) {
-        return full_number_as_tens[0].substr(1, full_number_as_tens[0].length) + decimal_translated;
-    }
+    if (full_number_as_tens !== null)
+        return get_negative_or_positive_number(is_negative, chn_s_or_t, full_number_as_tens[0].substr(1, full_number_as_tens[0].length) + decimal_translated)
     full_number_translated += decimal_translated;
-    return full_number_translated;
+    return get_negative_or_positive_number(is_negative, chn_s_or_t, full_number_translated)
 }
 
 module.exports = { get_q_and_a_from_gcloud, conv_num_as_string_to_chn_char };
-console.log(conv_num_as_string_to_chn_char("sc", "0"));
-console.log(conv_num_as_string_to_chn_char("sc", "1"));
-console.log(conv_num_as_string_to_chn_char("sc", "2"));
-console.log(conv_num_as_string_to_chn_char("sc", "3"));
-console.log(conv_num_as_string_to_chn_char("sc", "4"));
-console.log(conv_num_as_string_to_chn_char("sc", "5"));
-console.log(conv_num_as_string_to_chn_char("sc", "6"));
-console.log(conv_num_as_string_to_chn_char("sc", "7"));
-console.log(conv_num_as_string_to_chn_char("sc", "8"));
-console.log(conv_num_as_string_to_chn_char("sc", "9"));
-// fix yi-shi showing
-console.log(conv_num_as_string_to_chn_char("sc", "10"));
-console.log(conv_num_as_string_to_chn_char("sc", "12"));
-console.log(conv_num_as_string_to_chn_char("sc", "15"));
-console.log(conv_num_as_string_to_chn_char("sc", "22"));
-console.log(conv_num_as_string_to_chn_char("sc", "27"));
-console.log(conv_num_as_string_to_chn_char("sc", "100"));
-console.log(conv_num_as_string_to_chn_char("sc", "200"));
-console.log(conv_num_as_string_to_chn_char("sc", "202"));
-console.log(conv_num_as_string_to_chn_char("sc", "222"));
-console.log(conv_num_as_string_to_chn_char("sc", "2090"));
-console.log(conv_num_as_string_to_chn_char("sc", "10000"));
-console.log(conv_num_as_string_to_chn_char("sc", "520006771"));
-console.log(conv_num_as_string_to_chn_char("sc", "500006771"));
-console.log(conv_num_as_string_to_chn_char("sc", "1000043916225"));
-
-console.log('divider for traditional');
-console.log(conv_num_as_string_to_chn_char("tc", "0"));
-console.log(conv_num_as_string_to_chn_char("tc", "1"));
-console.log(conv_num_as_string_to_chn_char("tc", "2"));
-console.log(conv_num_as_string_to_chn_char("tc", "3"));
-console.log(conv_num_as_string_to_chn_char("tc", "4"));
-console.log(conv_num_as_string_to_chn_char("tc", "5"));
-console.log(conv_num_as_string_to_chn_char("tc", "6"));
-console.log(conv_num_as_string_to_chn_char("tc", "7"));
-console.log(conv_num_as_string_to_chn_char("tc", "8"));
-console.log(conv_num_as_string_to_chn_char("tc", "9"));
-// fix yi-shi showing
-console.log(conv_num_as_string_to_chn_char("tc", "10"));
-console.log(conv_num_as_string_to_chn_char("tc", "12"));
-console.log(conv_num_as_string_to_chn_char("tc", "15"));
-console.log(conv_num_as_string_to_chn_char("tc", "22"));
-console.log(conv_num_as_string_to_chn_char("tc", "27"));
-console.log(conv_num_as_string_to_chn_char("tc", "100"));
-console.log(conv_num_as_string_to_chn_char("tc", "200"));
-console.log(conv_num_as_string_to_chn_char("tc", "202"));
-console.log(conv_num_as_string_to_chn_char("tc", "222"));
-console.log(conv_num_as_string_to_chn_char("tc", "2090"));
-console.log(conv_num_as_string_to_chn_char("tc", "10000"));
-console.log(conv_num_as_string_to_chn_char("tc", "520006771"));
-console.log(conv_num_as_string_to_chn_char("tc", "500006771"));
-console.log(conv_num_as_string_to_chn_char("tc", "1000043916225"));

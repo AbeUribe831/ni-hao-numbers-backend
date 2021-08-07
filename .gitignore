@@ -1,5 +1,5 @@
 /node_modules
 /.pnp
 /listening_files/*
-
+/coverage
 google-credentials.json
