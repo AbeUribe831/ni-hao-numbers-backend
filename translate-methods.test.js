@@ -1,10 +1,18 @@
 const num_to_chn_char = require('./translate-methods').conv_num_as_string_to_chn_char;
 
-test('properly throws errors at invalid inputs', () => {
+test('num_to_chn_char properly throws errors at invalid inputs', () => {
+    expect(() => {num_to_chn_char("sc","1234.fd")}).toThrow("Parameter for number is not a valid number");
+    expect(() => {num_to_chn_char("sc","1234.fd.33")}).toThrow("Parameter for number is not a valid number");
+    expect(() => {num_to_chn_char("sc","")}).toThrow("Parameter for number is not a valid number");
 
+    expect(() => {num_to_chn_char("","1234")}).toThrow("Invalid parameter use eiter \"sc\" for simplified chinese or \"tc\" for traditional chinese");
+    expect(() => {num_to_chn_char("cc","1234")}).toThrow("Invalid parameter use eiter \"sc\" for simplified chinese or \"tc\" for traditional chinese");
+
+    expect(() => {num_to_chn_char("tc","10000000000000")}).toThrow("Number is out of range must be between -9,999,999,999,999.99 to 9,999,999,999,999.99");
+    expect(() => {num_to_chn_char("tc","-10000000000000")}).toThrow("Number is out of range must be between -9,999,999,999,999.99 to 9,999,999,999,999.99");
 });
 //TODO:: add test to check the number is in valid range and that it is a number
-test('properly translates numbers ones [-9,9] in both simplified and traditional chinese', () => {
+test('properly translates numbers ones [-9.99,9.99] in both simplified and traditional chinese', () => {
     expect(num_to_chn_char("sc", "-1")).toBe("负一");
     expect(num_to_chn_char("sc", "-2")).toBe("负二");
     expect(num_to_chn_char("sc", "-3")).toBe("负三");
@@ -14,6 +22,9 @@ test('properly translates numbers ones [-9,9] in both simplified and traditional
     expect(num_to_chn_char("sc", "-7")).toBe("负七");
     expect(num_to_chn_char("sc", "-8")).toBe("负八");
     expect(num_to_chn_char("sc", "-9")).toBe("负九");
+    
+    expect(num_to_chn_char("sc", "-3.06")).toBe("负三点零六");
+    expect(num_to_chn_char("sc", "-9.99")).toBe("负九点九九");
     
     expect(num_to_chn_char("sc", "0")).toBe("零");
     expect(num_to_chn_char("sc", "1")).toBe("一");
@@ -25,6 +36,8 @@ test('properly translates numbers ones [-9,9] in both simplified and traditional
     expect(num_to_chn_char("sc", "7")).toBe("七");
     expect(num_to_chn_char("sc", "8")).toBe("八");
     expect(num_to_chn_char("sc", "9")).toBe("九");
+    expect(num_to_chn_char("sc", "3.06")).toBe("三点零六");
+    expect(num_to_chn_char("sc", "9.99")).toBe("九点九九");
     
     // ---------------------- traditional chinese --------------------------//
     expect(num_to_chn_char("tc", "-1")).toBe("負一");
@@ -37,6 +50,9 @@ test('properly translates numbers ones [-9,9] in both simplified and traditional
     expect(num_to_chn_char("tc", "-8")).toBe("負八");
     expect(num_to_chn_char("tc", "-9")).toBe("負九");
     
+    expect(num_to_chn_char("tc", "-3.06")).toBe("負三點零六");
+    expect(num_to_chn_char("tc", "-9.99")).toBe("負九點九九"); 
+    
     expect(num_to_chn_char("tc", "0")).toBe("零")
     expect(num_to_chn_char("tc", "1")).toBe("一");
     expect(num_to_chn_char("tc", "2")).toBe("二");
@@ -47,6 +63,9 @@ test('properly translates numbers ones [-9,9] in both simplified and traditional
     expect(num_to_chn_char("tc", "7")).toBe("七");
     expect(num_to_chn_char("tc", "8")).toBe("八");
     expect(num_to_chn_char("tc", "9")).toBe("九");
+    
+    expect(num_to_chn_char("tc", "3.06")).toBe("三點零六");
+    expect(num_to_chn_char("tc", "9.99")).toBe("九點九九"); 
 });
 
 test('properly translates tens [-99, -10] U [10-99] in both simplified and traditional chinese', () => {
@@ -385,6 +404,8 @@ test('properly translate trillion[-9,999,999,999,999 , -1,000,000,000,000] U [1,
     expect(num_to_chn_char("sc", "1000000000000")).toBe("一兆");
     expect(num_to_chn_char("sc", "2761992517134")).toBe("两兆七千六百一十九亿九千两百五十一万七千一百三十四");
     expect(num_to_chn_char("sc", "9999999999999")).toBe("九兆九千九百九十九亿九千九百九十九万九千九百九十九");
+
+    expect(num_to_chn_char("sc", "9999999999999.99")).toBe("九兆九千九百九十九亿九千九百九十九万九千九百九十九点九九"); 
     // ---------------------- traditional chinese --------------------------//
     expect(num_to_chn_char("tc", "-1000000000000")).toBe("負一兆");
     expect(num_to_chn_char("tc", "-2761992517134")).toBe("負兩兆七千六百一十九億九千兩百五十一萬七千一百三十四");
@@ -393,4 +414,6 @@ test('properly translate trillion[-9,999,999,999,999 , -1,000,000,000,000] U [1,
     expect(num_to_chn_char("tc", "1000000000000")).toBe("一兆");
     expect(num_to_chn_char("tc", "2761992517134")).toBe("兩兆七千六百一十九億九千兩百五十一萬七千一百三十四");
     expect(num_to_chn_char("tc", "9999999999999")).toBe("九兆九千九百九十九億九千九百九十九萬九千九百九十九");
+    
+    expect(num_to_chn_char("tc", "9999999999999.99")).toBe("九兆九千九百九十九億九千九百九十九萬九千九百九十九點九九"); 
 });

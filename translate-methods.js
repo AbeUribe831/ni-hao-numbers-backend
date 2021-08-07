@@ -27,9 +27,13 @@ function remove_files(directory) {
     });
 }
 // param: numbers are a string 
-async function translate_numbers_to_chinese_chars(numbers) {
+function translate_numbers_to_chinese_chars(numbers, chn_char_type) {
     try {
-        let num_as_words = [];
+        let num_as_chn_chars = [];
+        numbers.forEach(number => {
+            num_as_chn_chars.push(conv_num_as_string_to_chn_char(chn_char_type, number));
+        })
+        /*
         numbers.forEach(number => {
             const split_num = number.split(".");
             // only the whole number as a word
@@ -52,8 +56,9 @@ async function translate_numbers_to_chinese_chars(numbers) {
             }
         })
         console.log('translate: ', translated_chars)
+        */
         // return promise of array of characters
-        return translated_chars;
+        return num_as_chn_chars;
     } catch (e) {
         console.log(e);
     }
@@ -86,7 +91,7 @@ async function translate_numbers_to_chinese_audio(numbers, file_name) {
 // TODO:: add checks that each instance in to_translate_numbers is valid or send error
 // TODO:: create translate_audio directory if doesn't exit, delete all audio files at the end of method
 // return: a json object of result 
-async function get_q_and_a_from_gcloud(to_translate_numbers) {
+async function get_q_and_a_from_gcloud(to_translate_numbers, chn_char_type) {
     let listen_and_character = [];
     let listen_and_number = [];
     let character_list = [];
@@ -118,11 +123,13 @@ async function get_q_and_a_from_gcloud(to_translate_numbers) {
         // translated_list is the response if promise succeeds otherwise go to catch
             console.log('does try run?');
 
-            let trans_chars_list = await translate_numbers_to_chinese_chars(character_list);
+            // let trans_chars_list = await translate_numbers_to_chinese_chars(character_list);
+            let trans_chars_list = translate_numbers_to_chinese_chars(character_list, chn_char_type);
             let files_lis_and_num_list = await translate_numbers_to_chinese_audio(listen_and_number, 'ListenAndNumber');
        
             
-            let trans_chars_from_lis_and_char_list = await translate_numbers_to_chinese_chars(listen_and_character); 
+            //let trans_chars_from_lis_and_char_list = await translate_numbers_to_chinese_chars(listen_and_character); 
+            let trans_chars_from_lis_and_char_list = translate_numbers_to_chinese_chars(listen_and_character, chn_char_type);
             let files_lis_from_lis_and_char_list = await translate_numbers_to_chinese_audio(listen_and_character, 'ListenAndCharacter');
            
 
@@ -250,18 +257,20 @@ function get_negative_or_positive_number(is_negative, char_set, number) {
 // parm: number: string
 // TODO:: check that number is valid and in range of [-9,999,999,999,999; 9,999,999,999,999]
 function conv_num_as_string_to_chn_char(chn_s_or_t, number) {
-    if(isNaN(number)) throw 'Parameter for number is not a valid number';
+    // check that inputs are valid
+    if(number === "" || isNaN(number)) throw new Error('Parameter for number is not a valid number');
     const num_as_float = parseFloat(number);
-    if(num_as_float < -9999999999999.99 || num_as_float > 9999999999999.99) throw 'Number is out of range must be between -9,999,999,999,999.99 to 9,999,999,999,999.99 '
-    if (chn_s_or_t !== 'sc' && chn_s_or_t !== 'tc') throw 'Invalid parameter use eiter "sc" for simplified chinese or "tc" for traditional chinese';
+    if(num_as_float < -9999999999999.99 || num_as_float > 9999999999999.99) throw new Error('Number is out of range must be between -9,999,999,999,999.99 to 9,999,999,999,999.99');
+    if (chn_s_or_t !== 'sc' && chn_s_or_t !== 'tc') throw new Error('Invalid parameter use eiter "sc" for simplified chinese or "tc" for traditional chinese');
+    
     let split_num = number.split(".");
     let decimal_translated = ""
     // convert decimals to chinese characters
     if (split_num.length == 2) {
         decimal_translated = chinese_char_map[chn_s_or_t]["."];
-        split_num[1].forEach(digit => {
+        for (let digit of split_num[1]) {
             decimal_translated += chinese_char_map["zero_to_nine"][digit];
-        });
+        };
     }
     // translate whole number
     let chn_char_in_rev = []; 
