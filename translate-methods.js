@@ -1,17 +1,8 @@
-const {Translate} = require('@google-cloud/translate').v2;
-const textToSpeech = require('@google-cloud/text-to-speech');
-const speech = require('@google-cloud/speech');
 const fs = require('fs');
 const path = require('path');
-const util = require('util');
 // target is the language 
-const target = 'zh';
-const language_code = 'cmn-CN';
-const language_gender = 'MALE';
-const translate = new Translate();
-const text_to_speech_client = new textToSpeech.TextToSpeechClient();
-
-const audio_dir = __dirname + '/listening_files';
+const url = 'http://127.0.0.1:3500/chinese-numbers-to-audio';
+const {XMLHttpRequest} = require('xmlhttprequest');
 
 const convertNumToWord = require('js-number-to-word-processor');
 
@@ -33,74 +24,50 @@ function translate_numbers_to_chinese_chars(numbers, chn_char_type) {
         numbers.forEach(number => {
             num_as_chn_chars.push(conv_num_as_string_to_chn_char(chn_char_type, number));
         })
-        /*
-        numbers.forEach(number => {
-            const split_num = number.split(".");
-            // only the whole number as a word
-            let word = convertNumToWord(split_num[0])[0].displayWholeWord;
-            if(split_num.length > 1) {
-                word += " Point";
-                for(digit of split_num[1]) {
-                    word += " " + convertNumToWord(digit)[0].displayWholeWord;
-                }
-            }
-            num_as_words.push(word);
-        });
-        console.log('numbers to words: ', num_as_words);
-        let [translated_chars] = await translate.translate(num_as_words, target);
-        // must loop through each char to fix translation issues with decimal
-        // TODO:: figure out how to work with traditional and simplified chinese characters
-        translated_chars.forEach((translated_char, index) => {
-            if(translated_char === '这') {
-                translated_chars[index] = '十';
-            }
-        })
-        console.log('translate: ', translated_chars)
-        */
         // return promise of array of characters
         return num_as_chn_chars;
     } catch (e) {
         console.log(e);
     }
 }
-// TODO:: async method to tranlate numbers to mp3 files
-// TODO:: see if I can write one request for multiple numbers
-// return: a list of the location of each audio file in order
-async function translate_numbers_to_chinese_audio(numbers, file_name) {
-   
-    let outputFile_list = [];
-    let index = 0;
-    for (const number of numbers) {
-        // .mp3 but have changed to .txt
-        let outputFile = `${audio_dir}/${file_name}${index}.mp3`;
-        const request = {
-            input : {text: number},
-            voice: {languageCode: language_code, ssmlGender: language_gender},
-            audioConfig: {audioEncoding: 'MP3'}
+
+function translate_numbers_to_chinese_audio(numbers) {
+    return new Promise((resolve, reject) => {
+        // data with array
+        let data = JSON.stringify({"chinese_numbers_list": numbers});
+        let translate_http = new XMLHttpRequest();
+        translate_http.open("POST", url);
+        translate_http.setRequestHeader("Content-Type", "application/json");
+        // what to do when the request is done
+        translate_http.onload = () => {
+            if (translate_http.status == 200) {
+                // returns an array
+                console.log('response', translate_http.responseText)
+                resolve(JSON.parse(translate_http.responseText)["chinese_audio"]);
+            }
+            else {
+                console.log('response', translate_http.response);
+                reject({
+                    status: translate_http.status,
+                    message: JSON.parse(translate_http.responseText)["message"]
+                });
+            }
         };
-        const [response] = await text_to_speech_client.synthesizeSpeech(request);
-        const writeFile = util.promisify(fs.writeFile);
-        await writeFile(outputFile, response.audioContent, 'binary');
-        outputFile_list.push(outputFile);
-        index++;
-    };
-    return outputFile_list;
+        translate_http.send(data);
+    });
 }
 // TODO:: deal with negatives: 负 (負) fu4 ex: 负三 = -3
 // to_translate_numbers from user request
 // TODO:: add checks that each instance in to_translate_numbers is valid or send error
 // TODO:: create translate_audio directory if doesn't exit, delete all audio files at the end of method
 // return: a json object of result 
-async function get_q_and_a_from_gcloud(to_translate_numbers, chn_char_type) {
+async function get_q_and_a(to_translate_numbers, chn_char_type) {
     let listen_and_character = [];
     let listen_and_number = [];
     let character_list = [];
     // fill the three lists based on what sort of translations are needed for each number
     to_translate_numbers.forEach(question => {
         // will continue because this question will not need translation 
-        if(question.question_type === 'readNumber' && question.answer_type === 'speak') {
-            return;
-        }
         if(question.question_type === 'listen') {
             if(question.answer_type === 'writeCharacter') {
                 listen_and_character.push(question.number);
@@ -113,98 +80,64 @@ async function get_q_and_a_from_gcloud(to_translate_numbers, chn_char_type) {
             character_list.push(question.number);
         }
     });
-    console.log('listen and write char:', listen_and_character);
-    console.log('listen and write num: ', listen_and_number);
-    console.log('either read or write char: ', character_list);
     // TODO:: write an async function calling each translate method for each list
     let response = [];
-    // use array.shift() to pop front element
     
-        // translated_list is the response if promise succeeds otherwise go to catch
-            console.log('does try run?');
-
-            // let trans_chars_list = await translate_numbers_to_chinese_chars(character_list);
-            let trans_chars_list = translate_numbers_to_chinese_chars(character_list, chn_char_type);
-            let files_lis_and_num_list = await translate_numbers_to_chinese_audio(listen_and_number, 'ListenAndNumber');
+    // translated_list is the response if promise succeeds otherwise go to catch
+        // let trans_chars_list = await translate_numbers_to_chinese_chars(character_list);
+        let trans_chars_list = translate_numbers_to_chinese_chars(character_list, chn_char_type);
+        let files_lis_and_num_list = await translate_numbers_to_chinese_audio(
+            translate_numbers_to_chinese_chars(listen_and_number, chn_char_type)
+        );         
+        //let trans_chars_from_lis_and_char_list = await translate_numbers_to_chinese_chars(listen_and_character); 
+        let trans_chars_from_lis_and_char_list = translate_numbers_to_chinese_chars(listen_and_character, chn_char_type);
+        let files_lis_from_lis_and_char_list = await translate_numbers_to_chinese_audio(trans_chars_from_lis_and_char_list);
        
-            
-            //let trans_chars_from_lis_and_char_list = await translate_numbers_to_chinese_chars(listen_and_character); 
-            let trans_chars_from_lis_and_char_list = translate_numbers_to_chinese_chars(listen_and_character, chn_char_type);
-            let files_lis_from_lis_and_char_list = await translate_numbers_to_chinese_audio(listen_and_character, 'ListenAndCharacter');
-           
-
-            console.log('files: ', files_lis_and_num_list);
-            console.log('files and char: ', files_lis_from_lis_and_char_list);
-            console.log('inside list: ', trans_chars_list);
-            for (question of to_translate_numbers) {
-                if(question.question_type === 'listen') {
-                    // TODO:: clean up repetative code 
-                    if(question.answer_type === 'writeCharacter') {
-                        // get audio file written in base64 and make reponse with translated character
-                        let audio_data = await fs.promises.readFile(files_lis_from_lis_and_char_list.shift());
-                        response.push({
-                            listen: audio_data.toString('base64'),
-                            question: null,
-                            answer: trans_chars_from_lis_and_char_list.shift(),
-                            answer_type: question.answer_type
-                        });
-                    }
-                    // get audio file and make response with number from the user request
-                    else {
-                        let audio_data = await fs.promises.readFile(files_lis_and_num_list.shift());
-                        response.push({
-                            listen: audio_data.toString('base64'),
-                            question: null,
-                            answer: question.number,
-                            answer_type: question.answer_type
-                        });
-                    }
+        for (question of to_translate_numbers) {
+            if(question.question_type === 'listen') {
+                if(question.answer_type === 'writeCharacter') {
+                    // don't need to write audio_data.toString('base64') because already encoded
+                    let audio_data = files_lis_from_lis_and_char_list.shift();
+                    response.push({
+                        listen: audio_data,
+                        question: null,
+                        answer: trans_chars_from_lis_and_char_list.shift(),
+                        answer_type: question.answer_type
+                    });
                 }
-                // readCharacter
-                else if(question.question_type === 'readCharacter') {  
-                    // answer with speaking, answer will be compared at runtime
-                    if(question.answer_type === 'speak') {
-                        response.push({
-                            listen: null,
-                            question: trans_chars_list.shift(),
-                            answer: null,
-                            answer_type: question.answer_type 
-                        });
-                    }
-                    // question.answer_type === writeCharacter 
-                    else {
-                        response.push({
-                            listen: null,
-                            question: trans_chars_list.shift(),
-                            answer: question.number,
-                            answer_type: question.answer_type
-                        });
-                    }
-                }
-                // question.question_type === readNumber
+                // get audio file and make response with number from the user request
                 else {
-                    if(question.answer_type === 'speak') {
-                        response.push({
-                            listen: null,
-                            question: question.number,
-                            answer: null,
-                            answer_type: question.answer_type
-                        });
-                    }
-                    // answer by writing character
-                    else {
-                        response.push({
-                            listen: null,
-                            question: question.number,
-                            answer: trans_chars_list.shift(),
-                            answer_type: question.answer_type
-                        });
-                    }
+                    let audio_data = files_lis_and_num_list.shift();
+                    response.push({
+                        listen: audio_data,
+                        question: null,
+                        answer: question.number,
+                        answer_type: question.answer_type
+                    });
                 }
-            };
-            remove_files(audio_dir);
-            // console.log('before the return: ', response);
-            return response;
+            }
+            // readCharacter
+            else if(question.question_type === 'readCharacter') {                      
+                // question.answer_type === writeCharacter 
+                response.push({
+                    listen: null,
+                    question: trans_chars_list.shift(),
+                    answer: question.number,
+                    answer_type: question.answer_type
+                });
+            }
+            // readNumber
+            else {                    
+                // answer by writing character
+                response.push({
+                    listen: null,
+                    question: question.number,
+                    answer: trans_chars_list.shift(),
+                    answer_type: question.answer_type
+                });
+            }
+        };
+        return response;
 }
 
 // ---------------------------------------- writing local function to convert number to chinese char ---------------------------------------- //
@@ -255,7 +188,6 @@ function get_negative_or_positive_number(is_negative, char_set, number) {
 }
 // parm: chn_s_or_t: string with "tc" or "sc"
 // parm: number: string
-// TODO:: check that number is valid and in range of [-9,999,999,999,999; 9,999,999,999,999]
 function conv_num_as_string_to_chn_char(chn_s_or_t, number) {
     // check that inputs are valid
     if(number === "" || isNaN(number)) throw new Error('Parameter for number is not a valid number');
@@ -355,4 +287,4 @@ function conv_num_as_string_to_chn_char(chn_s_or_t, number) {
     return get_negative_or_positive_number(is_negative, chn_s_or_t, full_number_translated)
 }
 
-module.exports = { get_q_and_a_from_gcloud, conv_num_as_string_to_chn_char };
+module.exports = { get_q_and_a, conv_num_as_string_to_chn_char };

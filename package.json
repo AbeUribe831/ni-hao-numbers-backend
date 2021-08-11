@@ -24,7 +24,8 @@
     "express": "^4.17.1",
     "fs": "0.0.1-security",
     "js-number-to-word-processor": "^3.0.4",
-    "util": "^0.12.4"
+    "util": "^0.12.4",
+    "xmlhttprequest": "^1.8.0"
   },
   "devDependencies": {
     "jest": "^27.0.6"

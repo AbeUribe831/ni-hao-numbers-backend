@@ -2,4 +2,7 @@
 /.pnp
 /listening_files/*
 /coverage
+/TensorFlowTTS
+/save_model
+/__pycache__
 google-credentials.json
