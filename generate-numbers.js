@@ -11,9 +11,7 @@ function get_random_inclusive_number_with_decimal_placement(min, max, decimal_pl
     const decimal_in_tens = Math.pow(10, decimal_placement);
     var min_num = parseFloat(min) * decimal_in_tens;
     var max_num = parseFloat(max) * decimal_in_tens;
-    console.log('see min number: ', min_num, ' see max number: ', max_num, ' see tens: ', decimal_in_tens);
     var retRand = ((Math.random() * (max_num - min_num) + min_num) / decimal_in_tens).toFixed(decimal_placement);
-    console.log('The random number is: ', retRand);
     return retRand
 }
 function get_answer_type(questionType) {

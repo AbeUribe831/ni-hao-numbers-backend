@@ -6,18 +6,8 @@ const {XMLHttpRequest} = require('xmlhttprequest');
 
 const convertNumToWord = require('js-number-to-word-processor');
 
-function remove_files(directory) {
-    fs.readdir(directory, (err, files) => {
-        if (err) throw err;
-
-        for(const file of files) {
-            fs.unlink(path.join(directory, file), err => {
-                if(err) throw err;
-            });
-        }
-    });
-}
-// param: numbers are a string 
+// param: numbers are a string array
+/*
 function translate_numbers_to_chinese_chars(numbers, chn_char_type) {
     try {
         let num_as_chn_chars = [];
@@ -30,27 +20,49 @@ function translate_numbers_to_chinese_chars(numbers, chn_char_type) {
         console.log(e);
     }
 }
-
+*/
+function promise_translate_numbers_to_chinese_chars(numbers, chn_char_type) {
+    return new Promise((resolve, reject) => {
+        //try {
+            let num_as_chn_chars = [];
+            numbers.forEach(number => {
+                num_as_chn_chars.push(conv_num_as_string_to_chn_char(chn_char_type, number));
+            })
+            /*
+            if(num_as_chn_chars.length === 0) {
+                reject('numbers was empty')
+            }
+            */
+            // return promise of array of characters
+            resolve(num_as_chn_chars);
+        //} catch (e) {
+        //    reject(e)
+            // console.log(e);
+        //}
+    })
+}
+// TODO:: maybe check that numbers is an array
 function translate_numbers_to_chinese_audio(numbers) {
     return new Promise((resolve, reject) => {
         // data with array
         let data = JSON.stringify({"chinese_numbers_list": numbers});
+        
         let translate_http = new XMLHttpRequest();
         translate_http.open("POST", url);
         translate_http.setRequestHeader("Content-Type", "application/json");
         // what to do when the request is done
-        translate_http.onload = () => {
-            if (translate_http.status == 200) {
-                // returns an array
-                console.log('response', translate_http.responseText)
-                resolve(JSON.parse(translate_http.responseText)["chinese_audio"]);
-            }
-            else {
-                console.log('response', translate_http.response);
-                reject({
-                    status: translate_http.status,
-                    message: JSON.parse(translate_http.responseText)["message"]
-                });
+        translate_http.onreadystatechange = () => {
+            if (translate_http.readyState === 4){
+                 if(translate_http.status === 200) {
+                    // returns an array
+                    resolve(JSON.parse(translate_http.responseText)["chinese_audio"]);
+                }
+                else {
+                    reject({
+                        status: translate_http.status,
+                        message: JSON.parse(translate_http.responseText)["message"]
+                    });
+                }
             }
         };
         translate_http.send(data);
@@ -85,19 +97,21 @@ async function get_q_and_a(to_translate_numbers, chn_char_type) {
     
     // translated_list is the response if promise succeeds otherwise go to catch
         // let trans_chars_list = await translate_numbers_to_chinese_chars(character_list);
-        let trans_chars_list = translate_numbers_to_chinese_chars(character_list, chn_char_type);
-        let files_lis_and_num_list = await translate_numbers_to_chinese_audio(
-            translate_numbers_to_chinese_chars(listen_and_number, chn_char_type)
+        // let trans_chars_list = translate_numbers_to_chinese_chars(character_list, chn_char_type);
+        let trans_chars_list = await promise_translate_numbers_to_chinese_chars(character_list, chn_char_type);
+        let audio_lis_and_num_list = await translate_numbers_to_chinese_audio( await
+            promise_translate_numbers_to_chinese_chars(listen_and_number, chn_char_type)
         );         
         //let trans_chars_from_lis_and_char_list = await translate_numbers_to_chinese_chars(listen_and_character); 
-        let trans_chars_from_lis_and_char_list = translate_numbers_to_chinese_chars(listen_and_character, chn_char_type);
-        let files_lis_from_lis_and_char_list = await translate_numbers_to_chinese_audio(trans_chars_from_lis_and_char_list);
+        // let trans_chars_from_lis_and_char_list = translate_numbers_to_chinese_chars(listen_and_character, chn_char_type);
+        let trans_chars_from_lis_and_char_list = await promise_translate_numbers_to_chinese_chars(listen_and_character, chn_char_type);
+        let audio_lis_from_lis_and_char_list = await translate_numbers_to_chinese_audio(trans_chars_from_lis_and_char_list);
        
         for (question of to_translate_numbers) {
             if(question.question_type === 'listen') {
                 if(question.answer_type === 'writeCharacter') {
                     // don't need to write audio_data.toString('base64') because already encoded
-                    let audio_data = files_lis_from_lis_and_char_list.shift();
+                    let audio_data = audio_lis_from_lis_and_char_list.shift();
                     response.push({
                         listen: audio_data,
                         question: null,
@@ -107,7 +121,7 @@ async function get_q_and_a(to_translate_numbers, chn_char_type) {
                 }
                 // get audio file and make response with number from the user request
                 else {
-                    let audio_data = files_lis_and_num_list.shift();
+                    let audio_data = audio_lis_and_num_list.shift();
                     response.push({
                         listen: audio_data,
                         question: null,
@@ -181,10 +195,12 @@ const chinese_char_map = {
         "-" : "負"
     }
 }
-function get_negative_or_positive_number(is_negative, char_set, number) {
+// This method assumes bool for is_negative, correct char_set, and proper chn_numbers because it is only called
+// by other methods that already check the validity of these parms
+function get_negative_or_positive_number(is_negative, char_set, chn_number) {
     if(is_negative)
-        return chinese_char_map[char_set]["-"] + number;
-    return number;
+        return chinese_char_map[char_set]["-"] + chn_number;
+    return chn_number;
 }
 // parm: chn_s_or_t: string with "tc" or "sc"
 // parm: number: string
@@ -193,7 +209,7 @@ function conv_num_as_string_to_chn_char(chn_s_or_t, number) {
     if(number === "" || isNaN(number)) throw new Error('Parameter for number is not a valid number');
     const num_as_float = parseFloat(number);
     if(num_as_float < -9999999999999.99 || num_as_float > 9999999999999.99) throw new Error('Number is out of range must be between -9,999,999,999,999.99 to 9,999,999,999,999.99');
-    if (chn_s_or_t !== 'sc' && chn_s_or_t !== 'tc') throw new Error('Invalid parameter use eiter "sc" for simplified chinese or "tc" for traditional chinese');
+    if (chn_s_or_t !== 'sc' && chn_s_or_t !== 'tc') throw new Error('Invalid parameter use either "sc" for simplified chinese or "tc" for traditional chinese');
     
     let split_num = number.split(".");
     let decimal_translated = ""
@@ -287,4 +303,10 @@ function conv_num_as_string_to_chn_char(chn_s_or_t, number) {
     return get_negative_or_positive_number(is_negative, chn_s_or_t, full_number_translated)
 }
 
-module.exports = { get_q_and_a, conv_num_as_string_to_chn_char };
+module.exports = { 
+    get_q_and_a,
+    conv_num_as_string_to_chn_char,
+    promise_translate_numbers_to_chinese_chars, 
+    translate_numbers_to_chinese_audio,
+    get_negative_or_positive_number
+ };
