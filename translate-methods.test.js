@@ -1,15 +1,6 @@
-/**
- * @jest-environment jsdom
- */
-const conv_num_as_string_to_chn_char = require('./translate-methods').conv_num_as_string_to_chn_char;
-const promise_translate_numbers_to_chinese_chars = require('./translate-methods').promise_translate_numbers_to_chinese_chars;
-const translate_numbers_to_chinese_audio = require('./translate-methods').translate_numbers_to_chinese_audio;
-const get_negative_or_positive_number = require('./translate-methods').get_negative_or_positive_number;
-const mod_get_q_and_a = require('./translate-methods').get_q_and_a;
-const translate_method = require('./translate-methods')
-const nock = require('nock');
 
 describe('translate number to chiense characters', () => {
+    const conv_num_as_string_to_chn_char = require('./translate-methods').conv_num_as_string_to_chn_char;
     test('conv_num_as_string_to_chn_char properly throws errors at invalid inputs', () => {
         expect(() => {conv_num_as_string_to_chn_char("sc","1234.fd")}).toThrow("Parameter for number is not a valid number");
         expect(() => {conv_num_as_string_to_chn_char("sc","1234.fd.33")}).toThrow("Parameter for number is not a valid number");
@@ -432,6 +423,7 @@ describe('translate number to chiense characters', () => {
 // since we know that method for translating a single number to chinese characters works
 // we only need to check when array has 0 instances, 1 instance, multiple instances, valid instances, invalid instances for promise_translate_numbers_to_chinese_chars
 describe('translate list of numbers to list of chinese characters', () => {
+    const promise_translate_numbers_to_chinese_chars = require('./translate-methods').promise_translate_numbers_to_chinese_chars;
     test('translate list of numbers throw error on non array for array input', () => {
         return promise_translate_numbers_to_chinese_chars('non-array input', 'sc').catch(e => expect(e.message).toBe("numbers.forEach is not a function"));
     });
@@ -473,6 +465,7 @@ describe('translate list of numbers to list of chinese characters', () => {
 });
 
 describe('negative or positive chinese characters', () => {
+    const get_negative_or_positive_number = require('./translate-methods').get_negative_or_positive_number;
     test('simplified negative number', () => {
         expect(get_negative_or_positive_number(true, 'sc', '两千三百一十六')).toStrictEqual('负两千三百一十六')
     });
@@ -488,6 +481,8 @@ describe('negative or positive chinese characters', () => {
 });
 // TODO:: test get_negative_or_positive_number(is_negative, char_set, number)
 describe('chinese characters to audio tests with post request inside', () => {
+    const translate_numbers_to_chinese_audio = require('./translate-methods').translate_numbers_to_chinese_audio;
+    const nock = require('nock');
     const url = 'http://127.0.0.1:3500';
     const post_url = '/chinese-numbers-to-audio'
     afterAll(() => {
@@ -518,20 +513,316 @@ describe('chinese characters to audio tests with post request inside', () => {
 // mock these methods
 // promise_translate_numbers_to_chinese_chars(character_list, chn_char_type)
 // translate_numbers_to_chinese_audio(list of chn chars)
-/*
-describe('get_q_and_a tests', () => {
- 
-    afterAll(() => {
-            nock.cleanAll();
-    })
-    jest.mock('./translate-methods')
-    test('only one number, read number, write character', () => {
-        translate_method.promise_translate_numbers_to_chinese_chars = jest.fn().mockResolvedValueOnce(() => ['一']).mockResolvedValueOnce(() => []).mockResolvedValueOnce(() =>[]);
-        // translate_method.translate_numbers_to_chinese_audio = jest.fn().mockResolvedValueOnce(() => []).mockResolvedValueOnce(() =>[]);
 
-        return translate_method.get_q_and_a([{number: '1', question_type: 'readNumber', answer_type: 'writeCharacter'}], 'sc').then(data => {
-            expect(data).toBe([{listen: null, question: '1', answer: '一', answer_type: 'writeCharacter'}]);
-        })
+
+describe('get_q_and_a tests', () => {
+    const translate_methods = require('./translate-methods');
+
+    test('only one number, read number, write character', async () => {
+        const mock_prom_tran_num_to_chars = jest
+            .fn()
+            .mockImplementationOnce(() => Promise.resolve(['一']))
+            .mockImplementation(() => Promise.resolve([]))
+        const mock_num_to_chn_audio = jest
+            .fn()
+            .mockImplementation(() => Promise.resolve([]))
+        expect.assertions(1);
+        const data = await translate_methods.get_q_and_a([{number: '1', question_type: 'readNumber', answer_type: 'writeCharacter'}], 'sc', mock_prom_tran_num_to_chars, mock_num_to_chn_audio);
+        expect(data).toStrictEqual([{listen: null, question: '1', answer: '一', answer_type: 'writeCharacter'}])
+    });
+    test('only one number, q:read character, a:write number', async() => {
+        const mock_prom_tran_num_to_chars = jest
+            .fn()
+            .mockImplementationOnce(() => Promise.resolve(['二']))
+            .mockImplementation(() => Promise.resolve([]))
+         const mock_num_to_chn_audio = jest
+            .fn()
+            .mockImplementation(() => Promise.resolve([]))       
+            expect.assertions(1);
+            const data = await translate_methods.get_q_and_a([{number: '2', question_type: 'readCharacter', answer_type: 'writeNumber'}], 'sc', mock_prom_tran_num_to_chars, mock_num_to_chn_audio);
+            expect(data).toStrictEqual([{listen: null, question: '二', answer: '2', answer_type: 'writeNumber'}])   
+    });
+    test('only one number, q:listen, a:write number and write character', async() => {
+        const mock_prom_tran_num_to_chars = jest
+            .fn()
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementation(() => Promise.resolve(['二']))
+        const mock_num_to_chn_audio = jest
+            .fn()
+            .mockImplementationOnce((arg1) => Promise.resolve(['audio test for 12']))       
+            .mockImplementationOnce(() => Promise.resolve())
+            .mockImplementationOnce(() => Promise.resolve())
+            .mockImplementationOnce((arg1) => Promise.resolve(['audio test for 12']))       
+            .mockImplementation(() => Promise.resolve())
+        expect.assertions(2);
+        const listen_number_data = await translate_methods.get_q_and_a([{number: '2', question_type: 'listen', answer_type: 'writeNumber'}], 'sc', mock_prom_tran_num_to_chars, mock_num_to_chn_audio);
+        // test listen and write number
+        expect(listen_number_data).toStrictEqual(
+            [
+                {listen: 'audio test for 12', question: null, answer: '2', answer_type: 'writeNumber'}
+            ])
+        const listen_char_data = await translate_methods.get_q_and_a([{number: '2', question_type: 'listen', answer_type: 'writeCharacter'}], 'sc', mock_prom_tran_num_to_chars, mock_num_to_chn_audio);
+        // test listen and write character 
+        expect(listen_char_data).toStrictEqual(
+            [
+                {listen: 'audio test for 12', question: null, answer: '二', answer_type: 'writeCharacter'}
+            ])
+        });
+    test('two numbers no listen', async() => {
+        expect.assertions(3);
+        const mock_tran_num_to_char = () => 
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['二十一', '九']))
+            .mockImplementation(() => Promise.resolve([]));
+        const mock_audio_no_audio = () =>
+            jest.fn()
+            .mockImplementation(() => Promise.resolve([]));
+
+        // both answer types writeCharacter
+        const data = await translate_methods.get_q_and_a(
+            [
+                {number: '21', question_type: 'readNumber', answer_type: 'writeCharacter'}, 
+                {number: '9', question_type: 'readNumber', answer_type: 'writeCharacter'}
+            ], 
+            'sc', 
+            mock_tran_num_to_char(), 
+            mock_audio_no_audio()
+        );
+        expect(data).toStrictEqual(
+            [
+                {listen: null, question: '21', answer: '二十一', answer_type: 'writeCharacter'},
+                {listen: null, question: '9', answer: '九', answer_type: 'writeCharacter'},
+
+            ]);
+
+        // mixed answer types
+        const dataOne = await translate_methods.get_q_and_a(
+            [
+                {number: '21', question_type: 'readCharacter', answer_type: 'writeNumber'}, 
+                {number: '9', question_type: 'readNumber', answer_type: 'writeCharacter'}
+            ], 
+            'sc', 
+            mock_tran_num_to_char(), 
+            mock_audio_no_audio()
+        );
+        expect(dataOne).toStrictEqual(
+            [
+                {listen: null, question: '二十一', answer: '21', answer_type: 'writeNumber'},
+                {listen: null, question: '9', answer: '九', answer_type: 'writeCharacter'},
+
+            ]);
+
+        // both answer types writeCharacter 
+        const dataTwo = await translate_methods.get_q_and_a(
+            [
+                {number: '21', question_type: 'readCharacter', answer_type: 'writeNumber'}, 
+                {number: '9', question_type: 'readCharacter', answer_type: 'writeNumber'}
+            ], 
+            'sc', 
+            mock_tran_num_to_char(), 
+            mock_audio_no_audio()
+        );
+        expect(dataTwo).toStrictEqual(
+            [
+                {listen: null, question: '二十一', answer: '21', answer_type: 'writeNumber'},
+                {listen: null, question: '九', answer: '9', answer_type: 'writeNumber'},
+
+            ]);
+    });
+    test('two number readNumber, listen, writeCharacter answer type', async() => {
+        expect.assertions(1)
+        const mock_num_to_chn_char_read_num_listen = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['三十四']))
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.resolve(['九十九']))
+        const mock_audio_write_char = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.resolve(['num audio']))
+        const data_read_num_listen_write_char = await translate_methods.get_q_and_a(
+            [
+                {number: '34', question_type: 'readNumber', answer_type: 'writeCharacter'},
+                {number: '99', question_type: 'listen', answer_type: 'writeCharacter'}
+            ],
+            'tc',
+            mock_num_to_chn_char_read_num_listen(),
+            mock_audio_write_char()
+        );
+        expect(data_read_num_listen_write_char).toStrictEqual(
+            [
+                {listen: null, question: '34', answer: '三十四', answer_type: 'writeCharacter'},
+                {listen: 'num audio', question: null, answer: '九十九', answer_type: 'writeCharacter'}
+            ]
+        )
     })
+    test('two numbers readNumber and listen, both answer types', async() => {
+        expect.assertions(1);
+        const mock_num_to_chn_char_both_write_char_write_num = () => 
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['负三十四', '负九十九']))
+            .mockImplementation(() => Promise.resolve([]))
+        const mock_audio_write_number = () => 
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['num audio']))
+            .mockImplementation(() => Promise.resolve([]))
+
+        const data_read_num_listen_write_num = await translate_methods.get_q_and_a(
+            [
+                {number: '-34', question_type: 'readNumber', answer_type: 'writeCharacter'},
+                {number: '-99', question_type: 'listen', answer_type: 'writeNumber'}
+            ],
+            'sc',
+            mock_num_to_chn_char_both_write_char_write_num(),
+            mock_audio_write_number()
+        )
+        expect(data_read_num_listen_write_num).toStrictEqual(
+            [
+                {listen: null, question: '-34', answer: '负三十四', answer_type: 'writeCharacter'},
+                {listen: 'num audio', question: null, answer: '-99', answer_type: 'writeNumber'}
+            ]
+        )
+    })
+    test('two numbers readCharacter and listen', async() => {
+        expect.assertions(2)
+        const mock_num_to_chn_char_write_number = () => 
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['三十四点六', '九十九']))
+            .mockImplementation(() => Promise.resolve([]))
+        const mock_audio_write_number = () => 
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['num audio']))
+            .mockImplementation(() => Promise.resolve([]))
+        const data_read_char_listen_write_num = await translate_methods.get_q_and_a(
+            [
+                {number: '34.6', question_type: 'readCharacter', answer_type: 'writeNumber'},
+                {number: '99', question_type: 'listen', answer_type: 'writeNumber'}
+            ],
+            'tc',
+            mock_num_to_chn_char_write_number(),
+            mock_audio_write_number()
+        )
+        expect(data_read_char_listen_write_num).toStrictEqual(
+            [
+                {listen: null, question: '三十四点六', answer: '34.6', answer_type: 'writeNumber'},
+                {listen: 'num audio', question: null, answer: '99', answer_type: 'writeNumber'}
+            ]
+        )
+
+        const mock_num_to_chn_char_write_number_write_character = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['七千零六']))
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.resolve(['四亿']))
+        const mock_audio_write_character = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.resolve(['write character audio']))
+        const data_read_char_listen_write_char = await translate_methods.get_q_and_a(
+            [
+                {number: '7006', question_type: 'readCharacter', answer_type: 'writeNumber'},
+                {number: '4000', question_type: 'listen', answer_type: 'writeCharacter'}
+            ],
+            'tc',
+            mock_num_to_chn_char_write_number_write_character(),
+            mock_audio_write_character()
+        )
+        expect(data_read_char_listen_write_char).toStrictEqual(
+            [
+                {listen: null, question: '七千零六', answer: '7006', answer_type: 'writeNumber'},
+                {listen: 'write character audio', question: null, answer: '四亿', answer_type: 'writeCharacter'}
+            ]
+        )
+    })
+    test('two numbers both listen', async() => {
+        expect.assertions(3)
+
+        const num_to_chn_char_both_write_number = () => 
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['五千三百一十', '五千三百一十六']))
+            .mockImplementation(() => Promise.resolve([]));
+        const audio_write_char_both_write_number = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['audio 1', 'audio 2']))
+            .mockImplementationOnce(() => Promise.resolve([]))
+        
+        const data_both_write_numbers = await translate_methods.get_q_and_a(
+            [
+                {number: '5310', question_type: 'listen', answer_type: 'writeNumber'},
+                {number: '5316', question_type: 'listen', answer_type: 'writeNumber'}
+            ],
+            'sc',
+            num_to_chn_char_both_write_number(),
+            audio_write_char_both_write_number()
+        );
+        expect(data_both_write_numbers).toStrictEqual(
+            [
+                
+                {listen: 'audio 1', question: null, answer: '5310', answer_type: 'writeNumber'},
+                {listen: 'audio 2', question: null, answer: '5316', answer_type: 'writeNumber'}
+            ]
+        );
+        
+        const num_to_chn_char_mixed_answers = () => 
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['五千三百一十']))
+            .mockImplementation(() => Promise.resolve(['五千三百一十六']));
+        const audio_write_char_both_mixed_answers = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['audio 1']))
+            .mockImplementationOnce(() => Promise.resolve(['audio 2']))
+        
+        const data_mixed_answers = await translate_methods.get_q_and_a(
+            [
+                {number: '5310', question_type: 'listen', answer_type: 'writeNumber'},
+                {number: '5316', question_type: 'listen', answer_type: 'writeCharacter'}
+            ],
+            'sc',
+            num_to_chn_char_mixed_answers(),
+            audio_write_char_both_mixed_answers()
+        );
+        expect(data_mixed_answers).toStrictEqual(
+            [
+                
+                {listen: 'audio 1', question: null, answer: '5310', answer_type: 'writeNumber'},
+                {listen: 'audio 2', question: null, answer: '五千三百一十六', answer_type: 'writeCharacter'}
+            ]
+        );
+
+         const num_to_chn_char_both_and_write_character = () => 
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.resolve(['五千三百一十', '五千三百一十六']))
+
+
+        const audio_write_char_both_write_character = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.resolve(['audio 1', 'audio 2']))
+
+        const data_both_write_characters = await translate_methods.get_q_and_a(
+            [
+                {number: '5310', question_type: 'listen', answer_type: 'writeCharacter'},
+                {number: '5316', question_type: 'listen', answer_type: 'writeCharacter'}
+            ],
+            'sc',
+            num_to_chn_char_both_and_write_character(),
+            audio_write_char_both_write_character()
+        )
+        expect(data_both_write_characters).toStrictEqual(
+            [
+                
+                {listen: 'audio 1', question: null, answer: '五千三百一十', answer_type: 'writeCharacter'},
+                {listen: 'audio 2', question: null, answer: '五千三百一十六', answer_type: 'writeCharacter'}
+            ]
+        )
+    })
+    // TODO:: fill this test
+    test('three numbers', () => {
+
+    })
+    // TODO:: write test for multiple numbers for each answer and question type
 })
-*/

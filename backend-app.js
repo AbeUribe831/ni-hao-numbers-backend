@@ -61,7 +61,7 @@ app.post('/studyboardSetup', (req, res) => {
     console.log('got numbers');
     // add res.charset = 'utf-8' using charset allows use to send chinese chars
     // add res.contentType('text') 
-    translate.get_q_and_a(generated_numbers, req.body.chn_char_type).then((body, err) => {
+    translate.get_q_and_a_wrapper(generated_numbers, req.body.chn_char_type).then((body, err) => {
         console.log(body);
         res.send(body);
     }).catch((err) => {
@@ -71,7 +71,7 @@ app.post('/studyboardSetup', (req, res) => {
 });
 
 app.post('/test', (req, res) => {
-    translate.get_q_and_a(list_to_translate).then((body, err) => {
+    translate.get_q_and_a_wrapper(list_to_translate).then((body, err) => {
         //console.log(body);
         res.send(body);
     }).catch((err) => {

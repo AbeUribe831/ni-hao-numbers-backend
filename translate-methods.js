@@ -4,23 +4,6 @@ const path = require('path');
 const url = 'http://127.0.0.1:3500/chinese-numbers-to-audio';
 const {XMLHttpRequest} = require('xmlhttprequest');
 
-const convertNumToWord = require('js-number-to-word-processor');
-
-// param: numbers are a string array
-/*
-function translate_numbers_to_chinese_chars(numbers, chn_char_type) {
-    try {
-        let num_as_chn_chars = [];
-        numbers.forEach(number => {
-            num_as_chn_chars.push(conv_num_as_string_to_chn_char(chn_char_type, number));
-        })
-        // return promise of array of characters
-        return num_as_chn_chars;
-    } catch (e) {
-        console.log(e);
-    }
-}
-*/
 function promise_translate_numbers_to_chinese_chars(numbers, chn_char_type) {
     return new Promise((resolve, reject) => {
         //try {
@@ -68,15 +51,19 @@ function translate_numbers_to_chinese_audio(numbers) {
         translate_http.send(data);
     });
 }
+async function get_q_and_a_wrapper(to_translate_numbers, chn_char_type) {
+    return await get_q_and_a(to_translate_numbers, chn_char_type, promise_translate_numbers_to_chinese_chars, translate_numbers_to_chinese_audio)
+}
 // TODO:: deal with negatives: 负 (負) fu4 ex: 负三 = -3
 // to_translate_numbers from user request
 // TODO:: add checks that each instance in to_translate_numbers is valid or send error
 // TODO:: create translate_audio directory if doesn't exit, delete all audio files at the end of method
 // return: a json object of result 
-async function get_q_and_a(to_translate_numbers, chn_char_type) {
+async function get_q_and_a(to_translate_numbers, chn_char_type, translate_nums_chn_char_list, chn_chars_to_audio_list) {
     let listen_and_character = [];
     let listen_and_number = [];
     let character_list = [];
+    
     // fill the three lists based on what sort of translations are needed for each number
     to_translate_numbers.forEach(question => {
         // will continue because this question will not need translation 
@@ -96,17 +83,12 @@ async function get_q_and_a(to_translate_numbers, chn_char_type) {
     let response = [];
     
     // translated_list is the response if promise succeeds otherwise go to catch
-        // let trans_chars_list = await translate_numbers_to_chinese_chars(character_list);
-        // let trans_chars_list = translate_numbers_to_chinese_chars(character_list, chn_char_type);
-        let trans_chars_list = await promise_translate_numbers_to_chinese_chars(character_list, chn_char_type);
-        let audio_lis_and_num_list = await translate_numbers_to_chinese_audio( await
-            promise_translate_numbers_to_chinese_chars(listen_and_number, chn_char_type)
+        let trans_chars_list = await translate_nums_chn_char_list(character_list, chn_char_type);
+        let audio_lis_and_num_list = await chn_chars_to_audio_list( await
+            translate_nums_chn_char_list(listen_and_number, chn_char_type)
         );         
-        //let trans_chars_from_lis_and_char_list = await translate_numbers_to_chinese_chars(listen_and_character); 
-        // let trans_chars_from_lis_and_char_list = translate_numbers_to_chinese_chars(listen_and_character, chn_char_type);
-        let trans_chars_from_lis_and_char_list = await promise_translate_numbers_to_chinese_chars(listen_and_character, chn_char_type);
-        let audio_lis_from_lis_and_char_list = await translate_numbers_to_chinese_audio(trans_chars_from_lis_and_char_list);
-       
+        let trans_chars_from_lis_and_char_list = await translate_nums_chn_char_list(listen_and_character, chn_char_type);
+        let audio_lis_from_lis_and_char_list = await chn_chars_to_audio_list(trans_chars_from_lis_and_char_list);
         for (question of to_translate_numbers) {
             if(question.question_type === 'listen') {
                 if(question.answer_type === 'writeCharacter') {
@@ -305,6 +287,7 @@ function conv_num_as_string_to_chn_char(chn_s_or_t, number) {
 
 module.exports = { 
     get_q_and_a,
+    get_q_and_a_wrapper,
     conv_num_as_string_to_chn_char,
     promise_translate_numbers_to_chinese_chars, 
     translate_numbers_to_chinese_audio,
