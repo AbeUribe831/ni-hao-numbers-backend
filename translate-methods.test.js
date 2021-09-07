@@ -5,15 +5,14 @@ describe('translate number to chiense characters', () => {
         expect(() => {conv_num_as_string_to_chn_char("sc","1234.fd")}).toThrow("Parameter for number is not a valid number");
         expect(() => {conv_num_as_string_to_chn_char("sc","1234.fd.33")}).toThrow("Parameter for number is not a valid number");
         expect(() => {conv_num_as_string_to_chn_char("sc","")}).toThrow("Parameter for number is not a valid number");
-
+        
         expect(() => {conv_num_as_string_to_chn_char("","1234")}).toThrow("Invalid parameter use either \"sc\" for simplified chinese or \"tc\" for traditional chinese");
         expect(() => {conv_num_as_string_to_chn_char(null,"1234")}).toThrow("Invalid parameter use either \"sc\" for simplified chinese or \"tc\" for traditional chinese");
         expect(() => {conv_num_as_string_to_chn_char("cc","1234")}).toThrow("Invalid parameter use either \"sc\" for simplified chinese or \"tc\" for traditional chinese");
-
+        
         expect(() => {conv_num_as_string_to_chn_char("tc","10000000000000")}).toThrow("Number is out of range must be between -9,999,999,999,999.99 to 9,999,999,999,999.99");
         expect(() => {conv_num_as_string_to_chn_char("tc","-10000000000000")}).toThrow("Number is out of range must be between -9,999,999,999,999.99 to 9,999,999,999,999.99");
     });
-    //TODO:: add test to check the number is in valid range and that it is a number
     test('properly translates numbers ones [-9.99,9.99] in both simplified and traditional chinese', () => {
         expect(conv_num_as_string_to_chn_char("sc", "-1")).toBe("负一");
         expect(conv_num_as_string_to_chn_char("sc", "-2")).toBe("负二");
@@ -191,7 +190,6 @@ describe('translate number to chiense characters', () => {
         expect(conv_num_as_string_to_chn_char("sc", "7438")).toBe("七千四百三十八");
         expect(conv_num_as_string_to_chn_char("sc", "9999")).toBe("九千九百九十九");
 
-
         // ---------------------- traditional chinese --------------------------//
         expect(conv_num_as_string_to_chn_char("tc", "-1000")).toBe("負一千");
         expect(conv_num_as_string_to_chn_char("tc", "-1004")).toBe("負一千零四");
@@ -234,7 +232,6 @@ describe('translate number to chiense characters', () => {
         expect(conv_num_as_string_to_chn_char("sc", "-52411")).toBe("负五万两千四百一十一");
         expect(conv_num_as_string_to_chn_char("sc", "-43320")).toBe("负四万三千三百二十");
         expect(conv_num_as_string_to_chn_char("sc", "-99999")).toBe("负九万九千九百九十九");
-        
         // ten ten-thousands case (one hundred thousand)
         expect(conv_num_as_string_to_chn_char("sc", "-100000")).toBe("负十万");
         expect(conv_num_as_string_to_chn_char("sc", "-200000")).toBe("负二十万");
@@ -248,7 +245,6 @@ describe('translate number to chiense characters', () => {
         expect(conv_num_as_string_to_chn_char("sc", "-70002381")).toBe("负七千万两千三百八十一");
         expect(conv_num_as_string_to_chn_char("sc", "-81235416")).toBe("负八千一百二十三万五千四百一十六");
         expect(conv_num_as_string_to_chn_char("sc", "-90667110")).toBe("负九千零六十六万七千一百一十");
-
 
         expect(conv_num_as_string_to_chn_char("sc", "10000")).toBe("一万");
         expect(conv_num_as_string_to_chn_char("sc", "70000")).toBe("七万");
@@ -266,7 +262,6 @@ describe('translate number to chiense characters', () => {
         expect(conv_num_as_string_to_chn_char("sc", "52411")).toBe("五万两千四百一十一");
         expect(conv_num_as_string_to_chn_char("sc", "43320")).toBe("四万三千三百二十");
         expect(conv_num_as_string_to_chn_char("sc", "99999")).toBe("九万九千九百九十九");
-
         // ten ten-thousands case (one hundred thousand)
         expect(conv_num_as_string_to_chn_char("sc", "100000")).toBe("十万");
         expect(conv_num_as_string_to_chn_char("sc", "200000")).toBe("二十万");
@@ -479,7 +474,8 @@ describe('negative or positive chinese characters', () => {
         expect(get_negative_or_positive_number(false, 'tc', '兩千三百一十六')).toStrictEqual('兩千三百一十六')
     });
 });
-// TODO:: test get_negative_or_positive_number(is_negative, char_set, number)
+
+// TODO:: change url to actual url
 describe('chinese characters to audio tests with post request inside', () => {
     const translate_numbers_to_chinese_audio = require('./translate-methods').translate_numbers_to_chinese_audio;
     const nock = require('nock');
@@ -509,15 +505,105 @@ describe('chinese characters to audio tests with post request inside', () => {
                 expect(data['message']).toStrictEqual('failed');
             });
     })
+    test('should retrieve failure request from Internal Server issue', () =>{
+        const scope = nock(url)
+            .post(post_url)
+            .reply(500, {
+                status: 500,
+                message: "Internal Server Error"
+            });
+            return translate_numbers_to_chinese_audio(['test']).catch(data => {
+                expect(data['message']).toStrictEqual('Internal Server Error');
+            });
+    })
 });
-// mock these methods
-// promise_translate_numbers_to_chinese_chars(character_list, chn_char_type)
-// translate_numbers_to_chinese_audio(list of chn chars)
 
-
-describe('get_q_and_a tests', () => {
+describe('get_q_and_a and wrapper function tests', () => {
     const translate_methods = require('./translate-methods');
+    test('throw error from invalid chinese character type ("sc" or "tc")', async () => {
+        await expect(translate_methods.get_q_and_a([{number: '1234', question_type: 'readNumber', answer_type: 'writeCharacter'}],"", jest.fn(), jest.fn()))
+        .rejects
+        .toThrowError(new Error("Invalid parameter use either \"sc\" for simplified chinese or \"tc\" for traditional chinese"));
 
+        await expect(translate_methods.get_q_and_a([{number: '1234', question_type: 'readNumber', answer_type: 'writeCharacter'}], null, jest.fn(), jest.fn()))
+        .rejects
+        .toThrowError(new Error("Invalid parameter use either \"sc\" for simplified chinese or \"tc\" for traditional chinese"));
+
+        await expect(translate_methods.get_q_and_a([{number: '1234', question_type: 'readNumber', answer_type: 'writeCharacter'}], "cc", jest.fn(), jest.fn()))
+        .rejects
+        .toThrowError(new Error("Invalid parameter use either \"sc\" for simplified chinese or \"tc\" for traditional chinese"));
+    });
+    test('throw error for to_translate_numbers not being a list', async () => {
+        await expect(translate_methods.get_q_and_a({number: '1234', question_type: 'readNumber', answer_type: 'writeCharacter'}, "sc", jest.fn(), jest.fn()))
+        .rejects
+        .toThrow('to_translate_numbers was not a list');
+    });
+    test('throw error from inner methods', async () => {
+        const mock_1_num_to_chn_char = jest
+            .fn()
+            .mockImplementationOnce(() => Promise.reject(new Error('Parameter for number is not a valid number')));
+        await expect(translate_methods.get_q_and_a([
+            {number: '12', question_type: 'readCharacter', answer_type: 'writeNumber'},
+            {number: 'f', question_type: 'readCharacter', answer_type: 'writeNumber'}
+        ], 'sc', mock_1_num_to_chn_char, jest.fn() 
+        ))
+        .rejects
+        .toThrow('Parameter for number is not a valid number');
+
+        const mock_2_num_to_chn_char = jest
+            .fn()
+            .mockImplementationOnce(() => Promise.resolve([]))       
+            .mockImplementationOnce(() => Promise.reject(new Error('Parameter for number is not a valid number')));       
+        await expect(translate_methods.get_q_and_a([
+            {number: '12', question_type: 'readCharacter', answer_type: 'writeNumber'},
+            {number: 'f', question_type: 'readCharacter', answer_type: 'writeNumber'}
+        ], 'sc', mock_2_num_to_chn_char, jest.fn() 
+        ))
+        .rejects
+        .toThrow('Parameter for number is not a valid number');       
+
+        const mock_3_num_to_chn_char = jest
+            .fn()
+            .mockImplementation(() => Promise.resolve([]))
+        const mock_3_chn_char_to_audio = jest
+            .fn()
+            .mockImplementationOnce(() => Promise.reject(new Error({status: 400, message: 'some error'})))
+        await expect(translate_methods.get_q_and_a([
+            {number: '12', question_type: 'readCharacter', answer_type: 'writeNumber'},
+            {number: 'f', question_type: 'readCharacter', answer_type: 'writeNumber'}
+        ], 'sc', mock_3_num_to_chn_char, mock_3_chn_char_to_audio 
+        ))
+        .rejects
+        .toThrow(new Error({status: 400, message: 'some error'}));       
+
+        const mock_4_num_to_chn_char = jest
+            .fn()
+            .mockImplementationOnce(() => Promise.resolve([]))    
+            .mockImplementationOnce(() => Promise.resolve([]))    
+            .mockImplementationOnce(() => Promise.reject(new Error('Parameter for number is not a valid number')))    
+         await expect(translate_methods.get_q_and_a([
+            {number: '12', question_type: 'readCharacter', answer_type: 'writeNumber'},
+            {number: 'f', question_type: 'readCharacter', answer_type: 'writeNumber'}
+        ], 'sc', mock_4_num_to_chn_char, jest.fn() 
+        ))
+        .rejects
+        .toThrow('Parameter for number is not a valid number');       
+
+        const mock_5_num_to_chn_char = jest
+            .fn()
+            .mockImplementation(() => Promise.resolve([]))
+        const mock_5_chn_char_to_audio = jest
+            .fn()
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.reject(new Error({status: 400, message: 'some error'})));
+        await expect(translate_methods.get_q_and_a([
+            {number: '12', question_type: 'readCharacter', answer_type: 'writeNumber'},
+            {number: 'f', question_type: 'readCharacter', answer_type: 'writeNumber'}
+        ], 'sc', mock_5_num_to_chn_char, mock_5_chn_char_to_audio 
+        ))
+        .rejects
+        .toThrow(new Error({status: 400, message: 'some error'}));       
+    });
     test('only one number, read number, write character', async () => {
         const mock_prom_tran_num_to_chars = jest
             .fn()
@@ -821,8 +907,117 @@ describe('get_q_and_a tests', () => {
         )
     })
     // TODO:: fill this test
-    test('three numbers', () => {
+    test('three numbers, each question type', async () => {
+        /* 1) read Number, write Character 
+         * 2) read Character, write Number 
+         * 3) listen, write Number
+         */
+        expect.assertions(2);
+        const mock_1_num_to_chn_char = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['負七萬四千九百九十四', '五千三百一十六']))
+            .mockImplementation(() => Promise.resolve([]))
+        const mock_1_chn_char_to_audio = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['third number audio']))
+            .mockImplementation(() => Promise.resolve([]))
+        const data_mock_one = await translate_methods.get_q_and_a(
+            [
+                {number: '-74994', question_type: 'readNumber', answer_type: 'writeCharacter'},
+                {number: '5316', question_type: 'readCharacter', answer_type: 'writeNumber'},
+                {number: '123.45', question_type: 'listen', answer_type: 'writeNumber'}
+            ],
+            'tc',
+            mock_1_num_to_chn_char(),
+            mock_1_chn_char_to_audio()
+        );
+        expect(data_mock_one).toStrictEqual(
+            [
+                {listen: null, question: '-74994', answer: '負七萬四千九百九十四', answer_type: 'writeCharacter'},
+                {listen: null, question: '五千三百一十六', answer: '5316', answer_type: 'writeNumber'},
+                {listen: 'third number audio', question: null, answer: '123.45', answer_type: 'writeNumber'},
 
-    })
+            ]
+        )
+        /* 1) read Number, write Number
+         * 2) read Character, write Character
+         * 3) listen, write Character 
+         */
+        const mock_2_num_to_chn_char = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['负七万四千九百九十四', '五千三百一十六']))
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.resolve(['一百二十三点四五']));
+        const mock_2_chn_char_to_audio = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.resolve(['third number audio']))
+        const data_mock_two = await translate_methods.get_q_and_a(
+            [
+                {number: '-74994', question_type: 'readNumber', answer_type: 'writeCharacter'},
+                {number: '5316', question_type: 'readCharacter', answer_type: 'writeNumber'},
+                {number: '123.45', question_type: 'listen', answer_type: 'writeCharacter'}
+            ],
+            'sc',
+            mock_2_num_to_chn_char(),
+            mock_2_chn_char_to_audio()
+        );
+        expect(data_mock_two).toStrictEqual(
+            [
+                {listen: null, question: '-74994', answer: '负七万四千九百九十四', answer_type: 'writeCharacter'},
+                {listen: null, question: '五千三百一十六', answer: '5316', answer_type: 'writeNumber'},
+                {listen: 'third number audio', question: null, answer: '一百二十三点四五', answer_type: 'writeCharacter'},
+
+            ]
+        );
+    });
     // TODO:: write test for multiple numbers for each answer and question type
+    test('multiple question types', async () => {
+        expect.assertions(1);
+        const mock_num_to_chn_char = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(
+                [
+                    '两兆三千四百五十六亿七千七百九十八万五千零九十', 
+                    '负三亿零四十三万两千九百八十七', 
+                    '负九十四万三千两百零二点四', 
+                    '八万四千五百四十二点零一',
+                    '两千一白五十七'
+                ]
+            ))
+            .mockImplementationOnce(() => Promise.resolve([]))
+            .mockImplementationOnce(() => Promise.resolve(['零点八五']))
+        const mock_chn_char_to_audio = () =>
+            jest.fn()
+            .mockImplementationOnce(() => Promise.resolve(['audio 1', 'audio 3']))
+            .mockImplementationOnce(() => Promise.resolve(['audio 2']))
+        const data = await translate_methods.get_q_and_a(
+            [
+                {number: '2345677985090', question_type: 'readNumber', answer_type: 'writeCharacter'},
+                {number: '-300432987', question_type: 'readNumber', answer_type: 'writeCharacter'},
+                {number: '-943202.4', question_type: 'readCharacter', answer_type: 'writeNumber'},
+                {number: '84542.01', question_type: 'readCharacter', answer_type: 'writeNumber'},
+                {number: '2157', question_type: 'readCharacter', answer_type: 'writeNumber'},
+                {number: '-32001', question_type: 'listen', answer_type: 'writeNumber'},
+                {number: '0.85', question_type: 'listen', answer_type: 'writeCharacter'},
+                {number: '-14.5', question_type: 'listen', answer_type: 'writeNumber'}
+            ],
+            'sc',
+            mock_num_to_chn_char(),
+            mock_chn_char_to_audio()
+        );
+        expect(data).toStrictEqual(
+            [
+                {listen: null, question: '2345677985090', answer: '两兆三千四百五十六亿七千七百九十八万五千零九十', answer_type: 'writeCharacter'},
+                {listen: null, question: '-300432987', answer: '负三亿零四十三万两千九百八十七', answer_type: 'writeCharacter'},
+                {listen: null, question: '负九十四万三千两百零二点四', answer: '-943202.4', answer_type: 'writeNumber'},
+                {listen: null, question: '八万四千五百四十二点零一', answer: '84542.01', answer_type: 'writeNumber'},
+                {listen: null, question: '两千一白五十七', answer: '2157', answer_type: 'writeNumber'},
+                {listen: 'audio 1', question: null, answer: '-32001', answer_type: 'writeNumber'},
+                {listen: 'audio 2', question: null, answer: '零点八五', answer_type: 'writeCharacter'},
+                {listen: 'audio 3', question: null, answer: '-14.5', answer_type: 'writeNumber'},
+
+            ]
+        );
+    });
 })

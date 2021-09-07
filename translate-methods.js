@@ -1,28 +1,16 @@
 const fs = require('fs');
 const path = require('path');
-// target is the language 
 const url = 'http://127.0.0.1:3500/chinese-numbers-to-audio';
 const {XMLHttpRequest} = require('xmlhttprequest');
 
 function promise_translate_numbers_to_chinese_chars(numbers, chn_char_type) {
-    return new Promise((resolve, reject) => {
-        //try {
-            let num_as_chn_chars = [];
-            numbers.forEach(number => {
-                num_as_chn_chars.push(conv_num_as_string_to_chn_char(chn_char_type, number));
-            })
-            /*
-            if(num_as_chn_chars.length === 0) {
-                reject('numbers was empty')
-            }
-            */
-            // return promise of array of characters
-            resolve(num_as_chn_chars);
-        //} catch (e) {
-        //    reject(e)
-            // console.log(e);
-        //}
-    })
+    return new Promise((resolve) => {
+        let num_as_chn_chars = [];
+        numbers.forEach(number => {
+            num_as_chn_chars.push(conv_num_as_string_to_chn_char(chn_char_type, number));
+        });
+        resolve(num_as_chn_chars);
+    });
 }
 // TODO:: maybe check that numbers is an array
 function translate_numbers_to_chinese_audio(numbers) {
@@ -54,40 +42,42 @@ function translate_numbers_to_chinese_audio(numbers) {
 async function get_q_and_a_wrapper(to_translate_numbers, chn_char_type) {
     return await get_q_and_a(to_translate_numbers, chn_char_type, promise_translate_numbers_to_chinese_chars, translate_numbers_to_chinese_audio)
 }
-// TODO:: deal with negatives: 负 (負) fu4 ex: 负三 = -3
 // to_translate_numbers from user request
-// TODO:: add checks that each instance in to_translate_numbers is valid or send error
-// TODO:: create translate_audio directory if doesn't exit, delete all audio files at the end of method
 // return: a json object of result 
-async function get_q_and_a(to_translate_numbers, chn_char_type, translate_nums_chn_char_list, chn_chars_to_audio_list) {
+async function get_q_and_a(to_translate_numbers, chn_char_type, translate_nums_to_chn_char_list, chn_chars_to_audio_list) {
+    if (chn_char_type !== 'sc' && chn_char_type !== 'tc')  throw Error('Invalid parameter use either "sc" for simplified chinese or "tc" for traditional chinese');
+    
     let listen_and_character = [];
     let listen_and_number = [];
     let character_list = [];
-    
-    // fill the three lists based on what sort of translations are needed for each number
-    to_translate_numbers.forEach(question => {
-        // will continue because this question will not need translation 
-        if(question.question_type === 'listen') {
-            if(question.answer_type === 'writeCharacter') {
-                listen_and_character.push(question.number);
+    try {
+        // fill the three lists based on what sort of translations are needed for each number
+        to_translate_numbers.forEach(question => {
+            // will continue because this question will not need translation 
+            if(question.question_type === 'listen') {
+                if(question.answer_type === 'writeCharacter') {
+                    listen_and_character.push(question.number);
+                }
+                else {
+                    listen_and_number.push(question.number);
+                }
             }
             else {
-                listen_and_number.push(question.number);
+                character_list.push(question.number);
             }
-        }
-        else {
-            character_list.push(question.number);
-        }
-    });
-    // TODO:: write an async function calling each translate method for each list
+        });
+    }catch(error) {
+        throw Error('to_translate_numbers was not a list')
+    }
+    try {
     let response = [];
     
     // translated_list is the response if promise succeeds otherwise go to catch
-        let trans_chars_list = await translate_nums_chn_char_list(character_list, chn_char_type);
+        let trans_chars_list = await translate_nums_to_chn_char_list(character_list, chn_char_type);
         let audio_lis_and_num_list = await chn_chars_to_audio_list( await
-            translate_nums_chn_char_list(listen_and_number, chn_char_type)
+            translate_nums_to_chn_char_list(listen_and_number, chn_char_type)
         );         
-        let trans_chars_from_lis_and_char_list = await translate_nums_chn_char_list(listen_and_character, chn_char_type);
+        let trans_chars_from_lis_and_char_list = await translate_nums_to_chn_char_list(listen_and_character, chn_char_type);
         let audio_lis_from_lis_and_char_list = await chn_chars_to_audio_list(trans_chars_from_lis_and_char_list);
         for (question of to_translate_numbers) {
             if(question.question_type === 'listen') {
@@ -134,6 +124,9 @@ async function get_q_and_a(to_translate_numbers, chn_char_type, translate_nums_c
             }
         };
         return response;
+    }catch(error) {
+        throw error
+    }
 }
 
 // ---------------------------------------- writing local function to convert number to chinese char ---------------------------------------- //
@@ -186,6 +179,8 @@ function get_negative_or_positive_number(is_negative, char_set, chn_number) {
 }
 // parm: chn_s_or_t: string with "tc" or "sc"
 // parm: number: string
+// return: translated number as a chinese character
+// all the errror checks on the input are done here 
 function conv_num_as_string_to_chn_char(chn_s_or_t, number) {
     // check that inputs are valid
     if(number === "" || isNaN(number)) throw new Error('Parameter for number is not a valid number');
