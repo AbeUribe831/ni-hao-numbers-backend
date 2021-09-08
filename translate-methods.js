@@ -29,10 +29,18 @@ function translate_numbers_to_chinese_audio(numbers) {
                     resolve(JSON.parse(translate_http.responseText)["chinese_audio"]);
                 }
                 else {
-                    reject({
-                        status: translate_http.status,
-                        message: JSON.parse(translate_http.responseText)["message"]
-                    });
+                    try {
+                        reject({
+                            status: translate_http.status,
+                            message: JSON.parse(translate_http.responseText)["message"]
+                        });
+                    } catch(e) {
+                        // this will be called if no connection to translate audio server is made
+                        reject({
+                            status: 500,
+                            message: translate_http.responseText
+                        });
+                    }
                 }
             }
         };
