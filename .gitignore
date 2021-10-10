@@ -5,4 +5,5 @@
 /TensorFlowTTS
 /save_model
 /__pycache__
+.env
 google-credentials.json

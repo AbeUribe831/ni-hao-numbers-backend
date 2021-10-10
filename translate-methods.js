@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const url = 'http://127.0.0.1:3500/chinese-numbers-to-audio';
+const url = `http://${process.env.BASE_URL}:3500/chinese-numbers-to-audio`;
 const {XMLHttpRequest} = require('xmlhttprequest');
 
 function promise_translate_numbers_to_chinese_chars(numbers, chn_char_type) {
