@@ -6,4 +6,5 @@
 /save_model
 /__pycache__
 .env
+.env.test
 google-credentials.json

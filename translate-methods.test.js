@@ -423,7 +423,7 @@ describe('translate list of numbers to list of chinese characters', () => {
         return promise_translate_numbers_to_chinese_chars('non-array input', 'sc').catch(e => expect(e.message).toBe("numbers.forEach is not a function"));
     });
     test('translate list of numbers throw error on null for array input', () => {
-        return promise_translate_numbers_to_chinese_chars(null, 'sc').catch(e => expect(e.message).toBe('Cannot read properties of null (reading \'forEach\')'));
+        return promise_translate_numbers_to_chinese_chars(null, 'sc').catch(e => expect(e.message).toMatch(/Cannot read propert*/));
     });
     test('translate list of numbers throw error on empty array for array input', () => {
         return promise_translate_numbers_to_chinese_chars([], 'sc').catch(e => expect(e).toBe('numbers was empty'));
