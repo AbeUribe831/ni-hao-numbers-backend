@@ -1,4 +1,4 @@
-
+require('custom-env').env('test');
 describe('translate number to chiense characters', () => {
     const conv_num_as_string_to_chn_char = require('./translate-methods').conv_num_as_string_to_chn_char;
     test('conv_num_as_string_to_chn_char properly throws errors at invalid inputs', () => {
@@ -423,7 +423,7 @@ describe('translate list of numbers to list of chinese characters', () => {
         return promise_translate_numbers_to_chinese_chars('non-array input', 'sc').catch(e => expect(e.message).toBe("numbers.forEach is not a function"));
     });
     test('translate list of numbers throw error on null for array input', () => {
-        return promise_translate_numbers_to_chinese_chars(null, 'sc').catch(e => expect(e.message).toBe('Cannot read property \'forEach\' of null'));
+        return promise_translate_numbers_to_chinese_chars(null, 'sc').catch(e => expect(e.message).toBe('Cannot read properties of null (reading \'forEach\')'));
     });
     test('translate list of numbers throw error on empty array for array input', () => {
         return promise_translate_numbers_to_chinese_chars([], 'sc').catch(e => expect(e).toBe('numbers was empty'));
@@ -479,7 +479,7 @@ describe('negative or positive chinese characters', () => {
 describe('chinese characters to audio tests with post request inside', () => {
     const translate_numbers_to_chinese_audio = require('./translate-methods').translate_numbers_to_chinese_audio;
     const nock = require('nock');
-    const url = 'http://127.0.0.1:3500';
+    const url = `http://${process.env.BASE_URL}:3500`;
     const post_url = '/chinese-numbers-to-audio'
     afterAll(() => {
         nock.cleanAll();

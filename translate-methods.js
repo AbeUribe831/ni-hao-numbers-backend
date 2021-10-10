@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+require('custom-env').env()
 const url = `http://${process.env.BASE_URL}:3500/chinese-numbers-to-audio`;
 const {XMLHttpRequest} = require('xmlhttprequest');
 
