@@ -2,7 +2,7 @@ const validRequestBody = require('./backend-app').validRequestBody;
 const app = require('./backend-app').app;
 const throw_text = 'bad request due to invalid syntax.\nCheck that min and max bound are between -9,999,999,999,999.99 to 9,999,999,999,999.99 and min_bound <= max_bound.\nhow_many is between 1 to 50.\nCheck that all questions are not false'
 const request = require('supertest');
-// test for app.post('/studyboardSetup', (req, res) => {})
+// test for app.post('/study-board-setup', (req, res) => {})
 // TODO:: include error handling check from  validRequestBody, wrapper_generate_numbers, and get_q_and_a_wrapper
 // TODO:: check that it can return one number, many numbers (of each question type), larger numbers, and decimals
 test('validRequestBody errors', () => {
@@ -374,13 +374,13 @@ test('validRequest success', () => {
     expect(() => {validRequestBody(valid_decimal_two)}).not.toThrow(throw_text)
 });
 
-describe('test app.post(/studyboardSetup)', () => {
+describe('test app.post(/study-board-setup)', () => {
     const random_gen = require('./generate-numbers')
     jest.mock('./generate-numbers');
     test('error from generate_numbers', async () => {
         expect.assertions(1)
         random_gen.wrapper_generate_numbers.mockImplementation(() => {throw 'some error'});
-        const response = await request(app).post('/studyboardSetup').send({
+        const response = await request(app).post('/study-board-setup').send({
             how_many: '0',
             min_bound: '-9999999999999.99',
             max_bound: '9999999999999.99',

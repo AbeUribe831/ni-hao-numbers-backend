@@ -39,7 +39,7 @@ app.get('/test', (req, res) => {
     res.send('Hello World!');
 });
 // error will contain status and message
-app.post('/studyboardSetup', (req, res) => {
+app.post('/study-board-setup', (req, res) => {
     // respond with 400 error if user request's body is not valid
     try {
         validRequestBody(req.body);
