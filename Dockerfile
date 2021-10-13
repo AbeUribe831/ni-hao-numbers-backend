@@ -5,7 +5,8 @@ WORKDIR /opt/node-app
 COPY package*.json /opt/node-app/
 RUN npm install
 EXPOSE 5000
-RUN cat >> .env << BASE_URL=www.nihaonumbers.com
+# create .env file with URL variable before running this 
+COPY .env /opt/node-app/.env
 # copy all files to working directory
 COPY . /opt/node-app/
 CMD node server.js

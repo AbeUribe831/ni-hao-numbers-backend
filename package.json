@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "contains modules for google-cloud modules to do basic translation, text-to-speech, speech-to-text. Also contains modules for making RESTful APIs",
   "main": "backend-app.js",
-  "proxy": "http://flask-api:3500",
   "scripts": {
     "test": "jest --coverage"
   },

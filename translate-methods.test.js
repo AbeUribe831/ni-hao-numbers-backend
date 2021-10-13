@@ -479,7 +479,7 @@ describe('negative or positive chinese characters', () => {
 describe('chinese characters to audio tests with post request inside', () => {
     const translate_numbers_to_chinese_audio = require('./translate-methods').translate_numbers_to_chinese_audio;
     const nock = require('nock');
-    const url = `http://${process.env.BASE_URL}:3500`;
+    const url = process.env.URL;
     const post_url = '/chinese-numbers-to-audio'
     afterAll(() => {
         nock.cleanAll();
