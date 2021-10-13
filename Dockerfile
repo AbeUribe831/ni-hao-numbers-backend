@@ -7,6 +7,7 @@ RUN npm install
 EXPOSE 5000
 # create .env file with URL variable before running this 
 COPY .env /opt/node-app/.env
+COPY .env.test /opt/node-app/.env.test
 # copy all files to working directory
 COPY . /opt/node-app/
 CMD node server.js
