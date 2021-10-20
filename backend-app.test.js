@@ -41,7 +41,7 @@ test('validRequestBody errors', () => {
         },
         chn_char_type: 'sc'
     };
-    const how_many_greater_than_50 = {
+    const how_many_greater_than_30 = {
         how_many: '51',
         min_bound: '-1',
         max_bound: '10',
@@ -285,7 +285,7 @@ test('validRequestBody errors', () => {
     expect(() => {validRequestBody(bad_how_many)}).toThrow(throw_text);
     expect(() => {validRequestBody(bad_min_bound)}).toThrow(throw_text);
     expect(() => {validRequestBody(how_many_less_than_zero)}).toThrow(throw_text);
-    expect(() => {validRequestBody(how_many_greater_than_50)}).toThrow(throw_text);
+    expect(() => {validRequestBody(how_many_greater_than_30)}).toThrow(throw_text);
     expect(() => {validRequestBody(no_min_bound)}).toThrow(throw_text);
     expect(() => {validRequestBody(min_bound_less_than_min)}).toThrow(throw_text);
     expect(() => {validRequestBody(bad_max_bound)}).toThrow(throw_text);

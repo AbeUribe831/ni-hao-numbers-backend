@@ -4,7 +4,7 @@ WORKDIR /opt/node-app
 
 COPY package*.json /opt/node-app/
 RUN npm install
-EXPOSE 5000
+EXPOSE 80 
 # create .env file with URL variable before running this 
 COPY .env /opt/node-app/.env
 COPY .env.test /opt/node-app/.env.test

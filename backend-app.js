@@ -11,7 +11,7 @@ function validRequestBody(body) {
     const decimal_placement = parseInt(body.decimal_placement);
     // quetions, answers, chn_char_type
     if(!isNaN(min_bound) && !isNaN(max_bound) && min_bound >= -9999999999999.99 && max_bound <= 9999999999999.99 && min_bound <= max_bound &&
-        !isNaN(how_many) && how_many >= 1 && how_many <= 50 && 
+        !isNaN(how_many) && how_many >= 1 && how_many <= 30 && 
         !isNaN(decimal_placement) && decimal_placement >= 0 && decimal_placement <= 2 &&
         typeof body.questions !== 'undefined' && (body.questions.readCharacter === true || body.questions.readCharacter === false) && 
         (body.questions.readNumber === true || body.questions.readNumber === false) && 
